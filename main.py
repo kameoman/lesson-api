@@ -1,58 +1,87 @@
-# streamlit run speech-to-text.py
-
-import os
-
-from google.cloud import speech
-# import io
-
+import io
+import requests
 import streamlit as st
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '.env'
+st.title('顔認証アプリ')
 
-def transcribe_file(content, lang='日本語'):
-    lang_code = {
-        '英語': 'en-US',
-        '日本語': 'ja-JP',
-        'スペイン語': 'es-ES'
-    }
+subscription_key = '' # AzureのAPIキー
+endpoint = ''         # AzureのAPIエンドポイント
+face_api_url = endpoint + 'face/v1.0/detect'
+headers = {
+    'Content-Type': 'application/octet-stream',
+    'Ocp-Apim-Subscription-Key': subscription_key
+}
+params = {
+    'returnFaceId': 'true',
+    'returnFaceAttributes': 'age,gender',
+}
 
-    client = speech.SpeechClient()
+# 検出した顔に描く長方形の座標を取得
+def get_rectangle(faceDictionary):
+    rect = faceDictionary['faceRectangle']
+    left = rect['left']
+    top = rect['top']
+    right = left + rect['width']
+    bottom = top + rect['height']
 
-#     with io.open(speech_file, 'rb')as f:
-#         content = f.read()
-    audio = speech.RecognitionAudio(content=content)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
-        language_code=lang_code[lang]
-    )
+    return ((left, top), (right, bottom))
 
-    response = client.recognize(config=config, audio=audio)
 
-    for result in response.results:
-        st.write(result.alternatives[0].transcript)
-#         print("認識結果: {}".format(result.alternatives[0].transcript))
+# 描画するテキストを取得
+def get_draw_text(faceDictionary):
+    rect = faceDictionary['faceRectangle']
+    faceAttr = faceDictionary['faceAttributes']
+    age = int(faceAttr['age'])
+    gender = faceAttr['gender']
+    text = f'{gender} {age}'
 
-st.title('文字起こしアプリ')
-st.header('概要')
-st.write('こちらはGoogle Cloud Speech-to-Textを利用した文字起こしアプリです。リンクは下記です。')
-st.markdown('<a href="https://cloud.google.com/speech-to-text?hl=ja">Cloud Speech-to-Text</a>', unsafe_allow_html=True)
+    # 枠に合わせてフォントサイズを調整
+    font_size = max(16, int(rect['width'] / len(text)))
+    font = ImageFont.truetype(r'C:\windows\fonts\meiryo.ttc', font_size)
 
-upload_file = st.file_uploader('ファイルのアップロード', type=['mp3', 'wav'])
-if upload_file is not None:
-    content = upload_file.read()
-    st.subheader('ファイル詳細')
-    file_details = {'FileName': upload_file.name, 'FileType': upload_file.type, 'FileSize': upload_file.size}
-    st.write(file_details)
-    st.subheader('音声の再生')
-    st.audio(content)
-    st.subheader('言語選択')
-    option = st.selectbox('翻訳言語を選択してください',
-                         ('英語', '日本語', 'スペイン語'))
-    st.write('選択中の言語：', option)
-    
-    st.write('文字起こし')
-    if st.button('開始'):
-        comment = st.empty()
-        comment.write('文字起こしを開始します')
-        transcribe_file(content, lang=option)
-        comment.write('完了しました')
+    return (text, font)
+
+
+# 認識された顔の上にテキストを描く座標を取得
+def get_text_rectangle(faceDictionary, text, font):
+    rect = faceDictionary['faceRectangle']
+    text_width, text_height = font.getsize(text)
+    left = rect['left'] + rect['width'] / 2 - text_width / 2
+    top = rect['top'] - text_height - 1
+
+    return (left, top)
+
+
+# テキストを描画
+def draw_text(faceDictionary):
+    text, font = get_draw_text(faceDictionary)
+    text_rect = get_text_rectangle(faceDictionary, text, font)
+    draw.text(text_rect, text, align='center', font=font, fill='red')
+
+
+uploaded_file = st.file_uploader("Choose an image...", type="jpg")
+
+if uploaded_file is not None:
+    img = Image.open(uploaded_file)
+
+    with io.BytesIO() as output:
+        img.save(output, format='JPEG')
+        binary_img = output.getvalue()
+
+    res = requests.post(face_api_url, params=params,
+                        headers=headers, data=binary_img)
+    results = res.json()
+
+    if not results:
+        raise Exception('画像から顔を検出できませんでした。')
+
+    for result in results:
+        draw = ImageDraw.Draw(img)
+        draw.rectangle(get_rectangle(result), outline='green', width=3)
+
+        draw_text(result)
+
+    st.image(img, caption='Uploaded Image.', use_column_width=True)
