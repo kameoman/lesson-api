@@ -8,7 +8,7 @@ from PIL import ImageFont
 st.title('顔認証アプリ')
 
 subscription_key = '.env' # AzureのAPIキー
-endpoint = ''         # AzureのAPIエンドポイント
+endpoint = '.env2'         # AzureのAPIエンドポイント
 face_api_url = endpoint + 'face/v1.0/detect'
 headers = {
     'Content-Type': 'application/octet-stream',
