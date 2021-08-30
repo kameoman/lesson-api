@@ -7,29 +7,29 @@ from google.cloud import speech
 
 import streamlit as st
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '.env'
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '.env'
 
-def transcribe_file(content, lang='日本語'):
-    lang_code = {
-        '英語': 'en-US',
-        '日本語': 'ja-JP',
-        'スペイン語': 'es-ES'
-    }
+# def transcribe_file(content, lang='日本語'):
+#     lang_code = {
+#         '英語': 'en-US',
+#         '日本語': 'ja-JP',
+#         'スペイン語': 'es-ES'
+#     }
 
-    client = speech.SpeechClient()
+#     client = speech.SpeechClient()
 
-#     with io.open(speech_file, 'rb')as f:
-#         content = f.read()
-    audio = speech.RecognitionAudio(content=content)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
-        language_code=lang_code[lang]
-    )
+# #     with io.open(speech_file, 'rb')as f:
+# #         content = f.read()
+#     audio = speech.RecognitionAudio(content=content)
+#     config = speech.RecognitionConfig(
+#         encoding=speech.RecognitionConfig.AudioEncoding.ENCODING_UNSPECIFIED,
+#         language_code=lang_code[lang]
+#     )
 
-    response = client.recognize(config=config, audio=audio)
+#     response = client.recognize(config=config, audio=audio)
 
-    for result in response.results:
-        st.write(result.alternatives[0].transcript)
+#     for result in response.results:
+#         st.write(result.alternatives[0].transcript)
 #         print("認識結果: {}".format(result.alternatives[0].transcript))
 
 st.title('文字起こしアプリ')
