@@ -5,7 +5,7 @@
 # from google.cloud import speech
 # # import io
 
-# import streamlit as st
+import streamlit as st
 
 # os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '.env'
 
